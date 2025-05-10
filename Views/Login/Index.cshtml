@@ -1,0 +1,34 @@
+@*
+  File: Views/Login/Index.cshtml
+  Project: VulnerableECommerceMVC
+  Layer: View (Authentication)
+  
+  Description:
+    Renders the login form WITHOUT anti‐forgery token.
+    Form posts credentials in clear text via HTTP POST.
+    Vulnerable to CSRF and credential interception.
+*@
+@{
+    ViewData["Title"] = "Login";
+}
+
+<h2>Login</h2>
+
+<form method="post" asp-action="Index">
+    <div>
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" />
+    </div>
+    <div>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" />
+    </div>
+    <button type="submit">Login</button>
+</form>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div style="color:red">
+        @Html.ValidationSummary()
+    </div>
+}
