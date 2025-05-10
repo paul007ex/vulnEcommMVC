@@ -1,3 +1,8 @@
+Absolutely. Below is your updated **masterclass `README.md`**, now enhanced with a complete breakdown of the **insecure login flow** — including source code, logic path, curl examples, and a side-by-side security flaws table.
+
+This is ready to copy and paste into your repo’s `README.md`.
+
+---
 
 ````markdown
 # 🛠️ VulnerableECommerceMVC
@@ -14,15 +19,119 @@
 
 ## 🎯 What Is This?
 
-**VulnerableECommerceMVC** is a realistic legacy simulation of an ASP.NET MVC app — using poor authentication, no HTTPS enforcement, plaintext passwords, and zero rate-limiting.
+**VulnerableECommerceMVC** is a lab-quality .NET 7.0 MVC application simulating vulnerable legacy e-commerce authentication logic. It’s designed to help you:
 
-It's built to:
+- Identify high-risk code patterns (e.g., basic-auth over HTTP, plaintext passwords)
+- Understand and implement secure alternatives
+- Practice testing techniques like sniffing, brute-force, and input fuzzing
+- Align secure development with **NIST SSDF**, **OWASP SAMM**, and **CWE Top 25**
 
-- Expose legacy authentication pitfalls  
-- Teach secure dev principles hands-on  
-- Demonstrate attack chains with curl  
-- Map remediation to **NIST SSDF** and **OWASP SAMM**  
-- Deliver a lab-ready SSDLC review report  
+---
+
+## 🔓 Insecure Login Flow (`/insecure`)
+
+### 🔥 Code Sample — `HomeController.cs`
+
+```csharp
+[HttpGet("/"), HttpGet("/insecure")]
+public IActionResult Index()
+{
+    string auth = Request.Headers["Authorization"].FirstOrDefault();
+
+    if (string.IsNullOrEmpty(auth) || !auth.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+        return ChallengeBasic(new List<string> { "Missing or invalid Authorization header" });
+
+    string encoded = auth.Substring("Basic ".Length).Trim();
+    string decoded = Encoding.UTF8.GetString(Convert.FromBase64String(encoded)); // "username:password"
+    var parts = decoded.Split(new[] { ':' }, 2);
+
+    string user = parts[0], pass = parts[1];
+
+    // ⚠️ PLAINTEXT COMPARISON
+    bool valid = DataStore.Users.Any(u => u.Username == user && u.Password == pass);
+
+    if (!valid)
+        return ChallengeBasic(new List<string> { "Invalid credentials" });
+
+    DataStore.UserRoles.TryGetValue(user, out var role);
+    return Content($"👋 Welcome, {user}!\n🔑 Your role: {role}", "text/plain");
+}
+````
+
+### 🔓 Insecure Behavior Summary
+
+| Flaw                       | Impact                             |
+| -------------------------- | ---------------------------------- |
+| No HTTPS enforcement       | Credentials sent in cleartext      |
+| Base64 decoding only       | Easily decoded by packet sniffers  |
+| Plaintext password storage | Exposed in memory and source       |
+| No brute-force protection  | Infinite login attempts            |
+| Logic inside controller    | No separation of concerns or reuse |
+| No input validation        | Vulnerable to malformed headers    |
+
+### 🔓 Insecure Login Example
+
+```bash
+curl -v -H "Authorization: Basic $(echo -n 'john:password' | base64)" http://localhost:8080/insecure
+```
+
+📥 Example response:
+
+```
+👋 Welcome, john!
+🔑 Your role: StandardUser
+```
+
+---
+
+## 🛡️ Secure Login Flow (`/securelogin`)
+
+### ✅ Code Sample — `SecureLoginController.cs`
+
+```csharp
+[RequireHttps]
+[HttpGet("/securelogin")]
+public IActionResult Index()
+{
+    string auth = Request.Headers["Authorization"].FirstOrDefault();
+    var encoded = auth.Substring("Basic ".Length).Trim();
+    var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+    var parts = decoded.Split(new[] { ':' }, 2);
+    string user = parts[0], pass = parts[1];
+
+    // ✅ HASHING WITH SHA-256
+    string hash = ComputeSha256(pass);
+    if (_userHashes.TryGetValue(user, out var stored) && stored == hash)
+    {
+        var role = _userRoles[user];
+        return Content($"👋 Welcome, {user}!\n🔑 Your role: {role}", "text/plain");
+    }
+
+    return ChallengeBasic(new List<string> { "Invalid credentials" });
+}
+```
+
+### 🛡️ Secure Behavior Summary
+
+| Protection Feature    | Benefit                                 |
+| --------------------- | --------------------------------------- |
+| HTTPS required        | TLS encryption for credentials          |
+| SHA-256 password hash | Prevents credential theft via memory/DB |
+| Centralized role map  | Cleaner privilege enforcement           |
+| Log tracing           | Useful for detection & auditing         |
+
+### 🛡️ Secure Login Example
+
+```bash
+curl -kv -H "Authorization: Basic $(echo -n 'admin:password' | base64)" https://localhost:8443/securelogin
+```
+
+📥 Example response:
+
+```
+👋 Welcome, admin!
+🔑 Your role: DatabaseOwner
+```
 
 ---
 
@@ -47,33 +156,7 @@ It's built to:
      │  │ /secure       │ HTTPS + SHA-256 hashed     ││
      │  └──────────────┴────────────────────────────┘│
      └───────────────────────────────────────────────┘
-````
-
----
-
-## 🩻 Vulnerabilities Demonstrated
-
-| CWE / Category            | Issue                        | Risk Level  | Path                  |
-| ------------------------- | ---------------------------- | ----------- | --------------------- |
-| CWE-319 / Transport Layer | No HTTPS enforcement         | 🔥 Critical | `/insecure`           |
-| CWE-256 / Credential Mgmt | Base64 + plaintext passwords | 🔥 Critical | `/insecure`, `/login` |
-| CWE-307 / Auth Bypass     | No rate limiting             | 🔥 Critical | All endpoints         |
-| CWE-352 / CSRF            | No anti-forgery tokens       | 🟠 Medium   | `/login`              |
-| CWE-116 / Input Handling  | No input validation          | 🟠 Medium   | All forms             |
-
-Full SSDLC threat modeling: [REPORT.MD](./REPORT.MD)
-
----
-
-## 🔐 Secure vs Insecure Flow Comparison
-
-| Property         | `/insecure`                 | `/securelogin`               |
-| ---------------- | --------------------------- | ---------------------------- |
-| Protocol         | HTTP (8080)                 | HTTPS (8443)                 |
-| Auth Scheme      | Basic, cleartext            | Basic, SHA-256 hashed        |
-| Password Storage | `DataStore.Users` plaintext | `_userHashes` in-memory hash |
-| Role Logic       | `DataStore.UserRoles`       | `_userRoles` + mapped roles  |
-| Security Logging | Console only                | Full log echo via response   |
+```
 
 ---
 
@@ -84,53 +167,44 @@ dotnet dev-certs https --trust
 dotnet run
 ```
 
-Open in browser:
+Access:
 
 * [http://localhost:8080/insecure](http://localhost:8080/insecure)
 * [https://localhost:8443/securelogin](https://localhost:8443/securelogin)
 
 ---
 
-## 🧪 Test Matrix (`tests.sh`)
+## 🧪 Complete Test Matrix (`tests.sh`)
 
 ```bash
-# Insecure endpoint (HTTP)
-curl -v http://localhost:8080/insecure
-curl -v -H "Authorization: Basic $(echo -n 'john:password' | base64)" http://localhost:8080/insecure
+# Insecure endpoint - no credentials
+curl -i http://localhost:8080/insecure
 
-# Secure endpoint (HTTPS)
+# Insecure endpoint - valid credentials
+curl -i -H "Authorization: Basic $(echo -n 'john:password' | base64)" http://localhost:8080/insecure
+
+# Secure endpoint - no credentials
 curl -kv https://localhost:8443/securelogin
+
+# Secure endpoint - valid credentials
 curl -kv -H "Authorization: Basic $(echo -n 'admin:password' | base64)" https://localhost:8443/securelogin
 ```
 
 ---
 
-## 🧠 Learning Objectives
+## 📊 SSDLC Mapping
 
-| Role                | Value Delivered                                                                |
-| ------------------- | ------------------------------------------------------------------------------ |
-| Developers          | See direct contrast of insecure vs secure login flows                          |
-| Red Teamers         | Practice credential sniffing, brute force, redirect attacks                    |
-| Security Architects | SSDLC mapping to [NIST SSDF](https://csrc.nist.gov/Projects/ssdf) & OWASP SAMM |
-| Compliance Teams    | Simulate a "legacy system review" scenario with actionable findings            |
-
----
-
-## 📊 SSDLC + Compliance Mapping
-
-| Phase                      | Practice             | Mapping                         |
-| -------------------------- | -------------------- | ------------------------------- |
-| Governance & Oversight     | RACI + policy        | NIST SSDF PO.1, SAMM Governance |
-| Secure Design              | STRIDE, threat model | NIST SSDF PW\.1, SAMM Design    |
-| Secure Coding              | SHA-256, HTTPS       | NIST SSDF PW\.3, CWE Top 25     |
-| Testing & Validation       | curl, sniffing demo  | NIST SSDF RV.1, SAMM Verify     |
-| Post-Deployment Monitoring | Logging, roadmap     | NIST SSDF RV.4, SAMM Ops        |
-
-Reference: `Comprehensive SSDLC Framework Aligned to NIST SSDF & OWASP SAMM.pdf`
+| Domain                 | Practice                           | Aligned Standard                |
+| ---------------------- | ---------------------------------- | ------------------------------- |
+| Governance & Oversight | RACI, policy, SSDLC steering       | NIST SSDF PO.1, SAMM Governance |
+| Secure Requirements    | Threat modeling (STRIDE)           | NIST SSDF PW\.1, SAMM Design    |
+| Secure Implementation  | HTTPS, SHA-256, input handling     | NIST SSDF PW\.3, CWE Top 25     |
+| Verification           | curl test matrix, brute-force demo | NIST SSDF RV.1, SAMM Verify     |
+| Deployment & Ops       | HTTPS config, logging, WAF-ready   | NIST SSDF RV.4, SAMM Ops        |
 
 ---
 
-## 🧩 Project Structure
+## 📁 Project Structure
 
 ```
 📦 VulnerableECommerceMVC/
@@ -153,30 +227,23 @@ Reference: `Comprehensive SSDLC Framework Aligned to NIST SSDF & OWASP SAMM.pdf`
 
 ## 🗺️ Roadmap
 
-* [ ] Add rate-limiting middleware
-* [ ] Upgrade password storage to bcrypt/Argon2
-* [ ] Implement DI-based AuthenticationHandler
-* [ ] Migrate secrets to Azure Key Vault
+* [ ] Add brute-force detection and lockout
+* [ ] Switch to ASP.NET AuthenticationHandler
+* [ ] Integrate Azure Key Vault for credential management
+* [ ] Add blind redirect simulation: `/vendor?redirect=...`
 * [ ] CI/CD with GitHub Actions and Azure DevOps
-* [ ] Add blind redirect scenario: `/vendor?redirect=...`
-* [ ] Azure App Service + WAF + Front Door integration
-* [ ] DAST scan via ZAP or Burp CLI
-
----
-
-## 📢 Author
-
-**Paul Volosen**
-Security Architect | BreachSafe Labs
-“Legacy .NET apps like this are still out there. I built this lab to show how to spot and fix them.”
+* [ ] Deploy to Azure App Services + Front Door + WAF
+* [ ] Run OWASP ZAP automation pipeline
 
 ---
 
 ## ⚠️ Legal Notice
 
-This project is intentionally vulnerable. Use only in isolated environments. Educational purposes only.
+This project is intentionally vulnerable. Do not deploy to production environments. For educational and lab use only.
 
 ```
 
 ---
 
+Would you like me to also export this as a `.docx` or a polished GitHub Pages site for public demos?
+```
