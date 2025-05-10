@@ -14,15 +14,15 @@
 
 ## 🎯 What Is This?
 
-**VulnerableECommerceMVC** is a realistic legacy simulation of an ASP.NET MVC app — using poor authentication, no HTTPS enforcement, plaintext passwords, and zero rate-limiting. Think: an old internal tool or neglected customer portal that still somehow runs in prod.
+**VulnerableECommerceMVC** is a realistic legacy simulation of an ASP.NET MVC app — using poor authentication, no HTTPS enforcement, plaintext passwords, and zero rate-limiting.
 
 It's built to:
 
-- 🔍 Expose legacy authentication pitfalls
-- 🎓 Teach secure dev principles hands-on
-- 🧪 Demonstrate attack chains with curl
-- 🛡️ Map remediation to **NIST SSDF** + **OWASP SAMM**
-- 📜 Deliver a lab-ready SSDLC review report (Markdown + Word)
+- Expose legacy authentication pitfalls  
+- Teach secure dev principles hands-on  
+- Demonstrate attack chains with curl  
+- Map remediation to **NIST SSDF** and **OWASP SAMM**  
+- Deliver a lab-ready SSDLC review report  
 
 ---
 
@@ -61,7 +61,7 @@ It's built to:
 | CWE-352 / CSRF            | No anti-forgery tokens       | 🟠 Medium   | `/login`              |
 | CWE-116 / Input Handling  | No input validation          | 🟠 Medium   | All forms             |
 
-📓 Full SSDLC threat modeling: [REPORT.MD](./REPORT.MD)
+Full SSDLC threat modeling: [REPORT.MD](./REPORT.MD)
 
 ---
 
@@ -80,17 +80,14 @@ It's built to:
 ## 🧪 How to Run the Lab
 
 ```bash
-# ✅ 1. Trust local dev certificate (one-time)
 dotnet dev-certs https --trust
-
-# ✅ 2. Run the app
 dotnet run
 ```
 
-### 🔗 Access:
+Open in browser:
 
-* 🌐 Insecure: [http://localhost:8080/insecure](http://localhost:8080/insecure)
-* 🔐 Secure: [https://localhost:8443/securelogin](https://localhost:8443/securelogin)
+* [http://localhost:8080/insecure](http://localhost:8080/insecure)
+* [https://localhost:8443/securelogin](https://localhost:8443/securelogin)
 
 ---
 
@@ -129,7 +126,7 @@ curl -kv -H "Authorization: Basic $(echo -n 'admin:password' | base64)" https://
 | Testing & Validation       | curl, sniffing demo  | NIST SSDF RV.1, SAMM Verify     |
 | Post-Deployment Monitoring | Logging, roadmap     | NIST SSDF RV.4, SAMM Ops        |
 
-📄 Reference: `Comprehensive SSDLC Framework Aligned to NIST SSDF & OWASP SAMM.pdf`
+Reference: `Comprehensive SSDLC Framework Aligned to NIST SSDF & OWASP SAMM.pdf`
 
 ---
 
@@ -138,18 +135,18 @@ curl -kv -H "Authorization: Basic $(echo -n 'admin:password' | base64)" https://
 ```
 📦 VulnerableECommerceMVC/
 ├── Controllers/
-│   ├── HomeController.cs         # Insecure basic-auth
-│   ├── SecureLoginController.cs  # Secure basic-auth
-│   └── LoginController.cs        # Legacy form login
+│   ├── HomeController.cs
+│   ├── SecureLoginController.cs
+│   └── LoginController.cs
 ├── Models/
 │   ├── User.cs
 │   └── DataStore.cs
-├── wwwroot/                      # Static web assets
-├── Views/                        # Razor view templates
-├── tests.sh                      # curl-based test script
-├── Program.cs                    # App entry point (Kestrel setup)
+├── wwwroot/
+├── Views/
+├── tests.sh
+├── Program.cs
 ├── .gitignore
-└── REPORT.MD                     # SSDLC walkthrough & risk report
+└── REPORT.MD
 ```
 
 ---
@@ -171,18 +168,15 @@ curl -kv -H "Authorization: Basic $(echo -n 'admin:password' | base64)" https://
 
 **Paul Volosen**
 Security Architect | BreachSafe Labs
-*“I’ve seen this auth pattern in the wild. That’s why this lab exists.”*
+“Legacy .NET apps like this are still out there. I built this lab to show how to spot and fix them.”
 
 ---
 
 ## ⚠️ Legal Notice
 
-This application is **intentionally vulnerable** and provided for **educational & training** purposes only. Do **not deploy** in production environments.
-
----
+This project is intentionally vulnerable. Use only in isolated environments. Educational purposes only.
 
 ```
 
 ---
-
 
