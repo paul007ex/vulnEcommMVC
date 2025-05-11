@@ -1,249 +1,67 @@
-Absolutely. Below is your updated **masterclass `README.md`**, now enhanced with a complete breakdown of the **insecure login flow** — including source code, logic path, curl examples, and a side-by-side security flaws table.
+# 🚀 VulnerableECommerceMVC Lab – Masterclass++ 🚀
 
-This is ready to copy and paste into your repo’s `README.md`.
-
----
-
-````markdown
-# 🛠️ VulnerableECommerceMVC
-
-> ⚠️ A purposely vulnerable .NET 7.0 e-commerce web app simulating real-world authentication misconfigurations, designed for secure SDLC training, compliance workshops, and red/blue team testing.
-
-[![NIST SSDF Aligned](https://img.shields.io/badge/NIST-SSDF-blue)](https://csrc.nist.gov/publications/detail/white-paper/2022/02/04/secure-software-development-framework-ssdf/final)
-[![OWASP SAMM](https://img.shields.io/badge/OWASP-SAMM-orange)](https://owaspsamm.org/model/)
-[![Built with .NET 7](https://img.shields.io/badge/.NET-7.0-purple)](https://dotnet.microsoft.com/en-us/download/dotnet/7.0)
-[![Vulnerable by Design](https://img.shields.io/badge/status-vulnerable-critical)](#)
-[![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
+**Author:** Paul Volosen, CISSP  
+**GitHub:** [paul007ex/vulnEcommMVC](https://github.com/paul007ex/vulnEcommMVC)  
+**Audience:** Developers → AppSec Engineers → Directors → CISOs  
 
 ---
 
-## 🎯 What Is This?
+## 📋 Table of Contents
 
-**VulnerableECommerceMVC** is a lab-quality .NET 7.0 MVC application simulating vulnerable legacy e-commerce authentication logic. It’s designed to help you:
-
-- Identify high-risk code patterns (e.g., basic-auth over HTTP, plaintext passwords)
-- Understand and implement secure alternatives
-- Practice testing techniques like sniffing, brute-force, and input fuzzing
-- Align secure development with **NIST SSDF**, **OWASP SAMM**, and **CWE Top 25**
-
----
-
-## 🔓 Insecure Login Flow (`/insecure`)
-
-### 🔥 Code Sample — `HomeController.cs`
-
-```csharp
-[HttpGet("/"), HttpGet("/insecure")]
-public IActionResult Index()
-{
-    string auth = Request.Headers["Authorization"].FirstOrDefault();
-
-    if (string.IsNullOrEmpty(auth) || !auth.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
-        return ChallengeBasic(new List<string> { "Missing or invalid Authorization header" });
-
-    string encoded = auth.Substring("Basic ".Length).Trim();
-    string decoded = Encoding.UTF8.GetString(Convert.FromBase64String(encoded)); // "username:password"
-    var parts = decoded.Split(new[] { ':' }, 2);
-
-    string user = parts[0], pass = parts[1];
-
-    // ⚠️ PLAINTEXT COMPARISON
-    bool valid = DataStore.Users.Any(u => u.Username == user && u.Password == pass);
-
-    if (!valid)
-        return ChallengeBasic(new List<string> { "Invalid credentials" });
-
-    DataStore.UserRoles.TryGetValue(user, out var role);
-    return Content($"👋 Welcome, {user}!\n🔑 Your role: {role}", "text/plain");
-}
-````
-
-### 🔓 Insecure Behavior Summary
-
-| Flaw                       | Impact                             |
-| -------------------------- | ---------------------------------- |
-| No HTTPS enforcement       | Credentials sent in cleartext      |
-| Base64 decoding only       | Easily decoded by packet sniffers  |
-| Plaintext password storage | Exposed in memory and source       |
-| No brute-force protection  | Infinite login attempts            |
-| Logic inside controller    | No separation of concerns or reuse |
-| No input validation        | Vulnerable to malformed headers    |
-
-### 🔓 Insecure Login Example
-
-```bash
-curl -v -H "Authorization: Basic $(echo -n 'john:password' | base64)" http://localhost:8080/insecure
-```
-
-📥 Example response:
-
-```
-👋 Welcome, john!
-🔑 Your role: StandardUser
-```
+1. [Lab Overview](#lab-overview)  
+2. [Learning Outcomes](#learning-outcomes)  
+3. [Prerequisites & Setup](#prerequisites--setup)  
+4. [Project Structure](#project-structure)  
+5. [Phase Walkthrough](#phase-walkthrough)  
+6. [Use-Case Deep Dives](#use-case-deep-dives)  
+   - [Open Redirect](#use-case-1-open-redirect)  
+   - [Basic Auth Leak](#use-case-2-basic-auth-leak)  
+   - [Base64 Misuse → HMAC](#use-case-3-base64-misuse--hmac)  
+7. [Threat Modeling & Compliance](#threat-modeling--compliance)  
+8. [Attack & Test Matrix](#attack--test-matrix)  
+9. [Extension Ideas](#extension-ideas)  
+10. [Resources & Further Reading](#resources--further-reading)  
+11. [Feedback & Contributing](#feedback--contributing)  
 
 ---
 
-## 🛡️ Secure Login Flow (`/securelogin`)
+## 🔍 Lab Overview
 
-### ✅ Code Sample — `SecureLoginController.cs`
+This hands-on lab simulates **legacy auth mistakes** and **modern remediations** in a .NET MVC app.  
+You will **clone**, **compile**, **attack**, **fix**, and **map** everything to real-world frameworks:
 
-```csharp
-[RequireHttps]
-[HttpGet("/securelogin")]
-public IActionResult Index()
-{
-    string auth = Request.Headers["Authorization"].FirstOrDefault();
-    var encoded = auth.Substring("Basic ".Length).Trim();
-    var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
-    var parts = decoded.Split(new[] { ':' }, 2);
-    string user = parts[0], pass = parts[1];
-
-    // ✅ HASHING WITH SHA-256
-    string hash = ComputeSha256(pass);
-    if (_userHashes.TryGetValue(user, out var stored) && stored == hash)
-    {
-        var role = _userRoles[user];
-        return Content($"👋 Welcome, {user}!\n🔑 Your role: {role}", "text/plain");
-    }
-
-    return ChallengeBasic(new List<string> { "Invalid credentials" });
-}
-```
-
-### 🛡️ Secure Behavior Summary
-
-| Protection Feature    | Benefit                                 |
-| --------------------- | --------------------------------------- |
-| HTTPS required        | TLS encryption for credentials          |
-| SHA-256 password hash | Prevents credential theft via memory/DB |
-| Centralized role map  | Cleaner privilege enforcement           |
-| Log tracing           | Useful for detection & auditing         |
-
-### 🛡️ Secure Login Example
-
-```bash
-curl -kv -H "Authorization: Basic $(echo -n 'admin:password' | base64)" https://localhost:8443/securelogin
-```
-
-📥 Example response:
-
-```
-👋 Welcome, admin!
-🔑 Your role: DatabaseOwner
-```
+> • **STRIDE** threat model  
+> • **NIST SSDF**  
+> • **OWASP SAMM**  
+> • **PCI-DSS v4.0**  
+> • **ISO 27001:2022**  
+> • **GDPR/CCPA**
 
 ---
 
-## 🧱 Architecture Overview
+## 🎓 Learning Outcomes
 
-```ascii
-                +---------------------------+
-                |     Curl / Browser        |
-                +------------+--------------+
-                             |
-             ┌──────────────▼────────────────┐
-             |      Kestrel Web Server       |
-             |     - HTTP: 8080              |
-             |     - HTTPS: 8443             |
-             └──────────────┬────────────────┘
-                            │
-     ┌──────────────────────▼────────────────────────┐
-     │             ASP.NET MVC Controllers           │
-     │  ┌──────────────┬────────────────────────────┐│
-     │  │ /insecure     │ Base64 + cleartext creds   ││
-     │  │ /login (POST) │ Legacy form, no CSRF       ││
-     │  │ /secure       │ HTTPS + SHA-256 hashed     ││
-     │  └──────────────┴────────────────────────────┘│
-     └───────────────────────────────────────────────┘
-```
+By completing this lab, you will be able to:
+
+- 🔓 Identify and exploit common auth flaws  
+- 🔄 Validate and secure redirect endpoints  
+- 🔑 Migrate from Basic-Auth → SHA-256 → HMAC  
+- 🛡️ Map fixes to security standards & compliance  
+- 📊 Build a repeatable attack/test matrix  
+- 🔧 Extend to modern SSO (SAML/OIDC) demos  
 
 ---
 
-## 🧪 How to Run the Lab
+## ⚙️ Prerequisites & Setup
 
-```bash
-dotnet dev-certs https --trust
-dotnet run
-```
+1. **Install**  
+   - [.NET 7 SDK & Runtime](https://dotnet.microsoft.com/download)  
+   - `git`, `curl`, **PowerShell** (Windows) / **Bash** (macOS/Linux)  
 
-Access:
+2. **Clone & Run**
 
-* [http://localhost:8080/insecure](http://localhost:8080/insecure)
-* [https://localhost:8443/securelogin](https://localhost:8443/securelogin)
-
----
-
-## 🧪 Complete Test Matrix (`tests.sh`)
-
-```bash
-# Insecure endpoint - no credentials
-curl -i http://localhost:8080/insecure
-
-# Insecure endpoint - valid credentials
-curl -i -H "Authorization: Basic $(echo -n 'john:password' | base64)" http://localhost:8080/insecure
-
-# Secure endpoint - no credentials
-curl -kv https://localhost:8443/securelogin
-
-# Secure endpoint - valid credentials
-curl -kv -H "Authorization: Basic $(echo -n 'admin:password' | base64)" https://localhost:8443/securelogin
-```
-
----
-
-## 📊 SSDLC Mapping
-
-| Domain                 | Practice                           | Aligned Standard                |
-| ---------------------- | ---------------------------------- | ------------------------------- |
-| Governance & Oversight | RACI, policy, SSDLC steering       | NIST SSDF PO.1, SAMM Governance |
-| Secure Requirements    | Threat modeling (STRIDE)           | NIST SSDF PW\.1, SAMM Design    |
-| Secure Implementation  | HTTPS, SHA-256, input handling     | NIST SSDF PW\.3, CWE Top 25     |
-| Verification           | curl test matrix, brute-force demo | NIST SSDF RV.1, SAMM Verify     |
-| Deployment & Ops       | HTTPS config, logging, WAF-ready   | NIST SSDF RV.4, SAMM Ops        |
-
----
-
-## 📁 Project Structure
-
-```
-📦 VulnerableECommerceMVC/
-├── Controllers/
-│   ├── HomeController.cs
-│   ├── SecureLoginController.cs
-│   └── LoginController.cs
-├── Models/
-│   ├── User.cs
-│   └── DataStore.cs
-├── wwwroot/
-├── Views/
-├── tests.sh
-├── Program.cs
-├── .gitignore
-└── REPORT.MD
-```
-
----
-
-## 🗺️ Roadmap
-
-* [ ] Add brute-force detection and lockout
-* [ ] Switch to ASP.NET AuthenticationHandler
-* [ ] Integrate Azure Key Vault for credential management
-* [ ] Add blind redirect simulation: `/vendor?redirect=...`
-* [ ] CI/CD with GitHub Actions and Azure DevOps
-* [ ] Deploy to Azure App Services + Front Door + WAF
-* [ ] Run OWASP ZAP automation pipeline
-
----
-
-## ⚠️ Legal Notice
-
-This project is intentionally vulnerable. Do not deploy to production environments. For educational and lab use only.
-
-```
-
----
-
-Would you like me to also export this as a `.docx` or a polished GitHub Pages site for public demos?
-```
+   ```bash
+   git clone https://github.com/paul007ex/vulnEcommMVC.git
+   cd vulnEcommMVC
+   dotnet restore
+   dotnet run
