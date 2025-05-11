@@ -230,7 +230,7 @@ curl "http://localhost:5000/auth/hmac?item=123&ts=0&sig=invalid"
 
 ## ✨ Extension Ideas
 
-- ▶️ **SAML/OIDC Integration**: Simulate NJ SSO broker & validate SAML assertions  
+- ▶️ **SAML/OIDC Integration**: Simulate SSO broker & validate SAML assertions  
 - ▶️ **POST Form Support**: HMAC auth via form POST payloads  
 - ▶️ **CI/CD Security Gates**: Integrate checks in GitHub Actions or Azure Pipelines  
 - ▶️ **Automated Threat Diagrams**: Export STRIDE via OWASP Threat Dragon  
