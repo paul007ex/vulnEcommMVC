@@ -3,7 +3,6 @@
 **Author:** Paul Volosen, CISSP  
 **GitHub:** [paul007ex/vulnEcommMVC](https://github.com/paul007ex/vulnEcommMVC)  
 **LinkedIn:** [paulvolosen](https://www.linkedin.com/in/paulvolosen/)  
-**Audience:** Developers → AppSec Engineers → Directors → CISOs  
 
 ---
 
