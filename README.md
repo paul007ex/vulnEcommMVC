@@ -1,4 +1,4 @@
-# 🚀 VulnerableECommerceMVC Lab – Masterclass++ 🚀
+[# 🚀 VulnerableECommerceMVC Lab – Masterclass++ 🚀
 
 **Author:** Paul Volosen, CISSP  
 **GitHub:** [paul007ex/vulnEcommMVC](https://github.com/paul007ex/vulnEcommMVC)  
@@ -246,14 +246,8 @@ curl "http://localhost:5000/auth/hmac?item=123&ts=0&sig=invalid"
 - [ISO 27001:2022](https://www.iso.org/isoiec-27001-information-security.html)  
 - [GDPR Compliance](https://gdpr-info.eu/)  
 
----
-
-## 🚀 Feedback & Contributing
-
-> Love it? ⭐️ the repo!  
-> Found a gap? 🐛 file an issue.  
-> Want to contribute? 🔀 submit a PR!
 
 ---
 
 
+](https://github.com/paul007ex/vulnEcommMVC)
