@@ -1,4 +1,4 @@
-[# 🚀 VulnerableECommerceMVC Lab – Masterclass++ 🚀
+[# 🚀 VulnerableECommerceMVC Lab –  🚀
 
 **Author:** Paul Volosen, CISSP  
 **GitHub:** [paul007ex/vulnEcommMVC](https://github.com/paul007ex/vulnEcommMVC)  
